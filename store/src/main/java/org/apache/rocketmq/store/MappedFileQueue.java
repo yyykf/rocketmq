@@ -463,6 +463,7 @@ public class MappedFileQueue {
         try {
             MappedFile mappedFile = this.getFirstMappedFile();
             if (mappedFile != null) {
+                // 假设每个 commitlog 大小为 100字节，此时要查找 101 偏移量所在的文件，那就是 （101/100） - (100/100) todo 不对吧，不是直接偏移量除大小就好吗
                 int index = (int) ((offset / this.mappedFileSize) - (mappedFile.getFileFromOffset() / this.mappedFileSize));
                 if (index < 0 || index >= this.mappedFiles.size()) {
                     LOG_ERROR.warn("Offset for {} not matched. Request offset: {}, index: {}, " +

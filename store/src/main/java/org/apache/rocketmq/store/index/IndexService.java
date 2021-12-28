@@ -155,14 +155,16 @@ public class IndexService {
     }
 
     public QueryOffsetResult queryOffset(String topic, String key, int maxNum, long begin, long end) {
+        // 满足条件的消息偏移量集合
         List<Long> phyOffsets = new ArrayList<Long>(maxNum);
 
-        long indexLastUpdateTimestamp = 0;
-        long indexLastUpdatePhyoffset = 0;
+        long indexLastUpdateTimestamp = 0;  // 已索引文件的最大存储时间
+        long indexLastUpdatePhyoffset = 0;  // 已索引文件的最大偏移量
         maxNum = Math.min(maxNum, this.defaultMessageStore.getMessageStoreConfig().getMaxMsgsNumBatch());
         try {
             this.readWriteLock.readLock().lock();
             if (!this.indexFileList.isEmpty()) {
+                // 倒序查找
                 for (int i = this.indexFileList.size(); i > 0; i--) {
                     IndexFile f = this.indexFileList.get(i - 1);
                     boolean lastFile = i == this.indexFileList.size();
@@ -171,7 +173,7 @@ public class IndexService {
                         indexLastUpdatePhyoffset = f.getEndPhyOffset();
                     }
 
-                    if (f.isTimeMatched(begin, end)) {
+                    if (f.isTimeMatched(begin, end)) {  // 对应索引文件是否符合查询时间范围
 
                         f.selectPhyOffset(phyOffsets, buildKey(topic, key), maxNum, begin, end, lastFile);
                     }
@@ -246,9 +248,11 @@ public class IndexService {
     }
 
     private IndexFile putKey(IndexFile indexFile, DispatchRequest msg, String idxKey) {
+        // 一直重试直到添加成功，CAS避免加锁?
         for (boolean ok = indexFile.putKey(idxKey, msg.getCommitLogOffset(), msg.getStoreTimestamp()); !ok; ) {
             log.warn("Index file [" + indexFile.getFileName() + "] is full, trying to create another one");
 
+            // 如果文件满了，重新创建一个新的，继续添加，直到成功 todo 这一步感觉还是异步来做比较好，
             indexFile = retryGetAndCreateIndexFile();
             if (null == indexFile) {
                 return null;

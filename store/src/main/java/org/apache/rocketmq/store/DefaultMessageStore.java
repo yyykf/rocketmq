@@ -650,6 +650,7 @@ public class DefaultMessageStore implements MessageStore {
     }
 
     public MessageExt lookMessageByOffset(long commitLogOffset) {
+        // todo 这里的 4 应该是代表 4 字节的消息长度
         SelectMappedBufferResult sbr = this.commitLog.getMessage(commitLogOffset, 4);
         if (null != sbr) {
             try {
@@ -829,7 +830,7 @@ public class DefaultMessageStore implements MessageStore {
                 break;
             }
 
-            Collections.sort(queryOffsetResult.getPhyOffsets());
+            Collections.sort(queryOffsetResult.getPhyOffsets());    // 偏移量需要升序
 
             queryMessageResult.setIndexLastUpdatePhyoffset(queryOffsetResult.getIndexLastUpdatePhyoffset());
             queryMessageResult.setIndexLastUpdateTimestamp(queryOffsetResult.getIndexLastUpdateTimestamp());
@@ -1428,7 +1429,7 @@ public class DefaultMessageStore implements MessageStore {
 
         @Override
         public void dispatch(DispatchRequest request) {
-            if (DefaultMessageStore.this.messageStoreConfig.isMessageIndexEnable()) {
+            if (DefaultMessageStore.this.messageStoreConfig.isMessageIndexEnable()) {   // 是否需要构建索引文件取决于该参数是否为true
                 DefaultMessageStore.this.indexService.buildIndex(request);
             }
         }
@@ -1760,7 +1761,7 @@ public class DefaultMessageStore implements MessageStore {
 
                             if (dispatchRequest.isSuccess()) {
                                 if (size > 0) {
-                                    DefaultMessageStore.this.doDispatch(dispatchRequest);
+                                    DefaultMessageStore.this.doDispatch(dispatchRequest);   // 分发存储请求到consumeQueue，buildIndex
 
                                     if (BrokerRole.SLAVE != DefaultMessageStore.this.getMessageStoreConfig().getBrokerRole()
                                         && DefaultMessageStore.this.brokerConfig.isLongPollingEnable()) {

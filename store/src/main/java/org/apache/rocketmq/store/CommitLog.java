@@ -816,8 +816,8 @@ public class CommitLog {
         int mappedFileSize = this.defaultMessageStore.getMessageStoreConfig().getMapedFileSizeCommitLog();
         MappedFile mappedFile = this.mappedFileQueue.findMappedFileByOffset(offset, offset == 0);
         if (mappedFile != null) {
-            int pos = (int) (offset % mappedFileSize);
-            return mappedFile.selectMappedBuffer(pos, size);
+            int pos = (int) (offset % mappedFileSize);  // 文件中的相对偏移量
+            return mappedFile.selectMappedBuffer(pos, size);    // 从相对偏移量开始，读取 size 字节的数据
         }
         return null;
     }

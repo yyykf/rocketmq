@@ -20,21 +20,37 @@ import java.nio.ByteBuffer;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
+/**
+ * 索引文件的头部信息
+ */
 public class IndexHeader {
+    /** 头部大小，40字节 */
     public static final int INDEX_HEADER_SIZE = 40;
+    /** 最小存储时间起始字节偏移量 */
     private static int beginTimestampIndex = 0;
+    /** 最大存储时间起始字节偏移量 */
     private static int endTimestampIndex = 8;
+    /** 最小物理偏移量起始字节偏移量 */
     private static int beginPhyoffsetIndex = 16;
+    /** 最大物理偏移量起始字节偏移量 */
     private static int endPhyoffsetIndex = 24;
+    /** 已用 hash 槽个数起始字节偏移量 */
     private static int hashSlotcountIndex = 32;
+    /** 已有的 hash 槽个数起始字节偏移量 */
     private static int indexCountIndex = 36;
     private final ByteBuffer byteBuffer;
+    /** 最小的消息存储时间，8字节 */
     private AtomicLong beginTimestamp = new AtomicLong(0);
+    /** 最大的消息存储时间，8字节 */
     private AtomicLong endTimestamp = new AtomicLong(0);
+    /** 最小的消息物理偏移量，8字节 */
     private AtomicLong beginPhyOffset = new AtomicLong(0);
+    /** 最大的消息物理偏移量，8字节 */
     private AtomicLong endPhyOffset = new AtomicLong(0);
+    /** 已用的 hash 槽个数，4字节 */
     private AtomicInteger hashSlotCount = new AtomicInteger(0);
 
+    /** 已有的 index 条目数，4字节 todo 为什么默认值是1，应该是因为索引下标起始值为1，因此当某个索引槽的 prevIndexNo 为 0的时候，就可以代表是链表的首个元素了 */
     private AtomicInteger indexCount = new AtomicInteger(1);
 
     public IndexHeader(final ByteBuffer byteBuffer) {
@@ -51,7 +67,7 @@ public class IndexHeader {
         this.indexCount.set(byteBuffer.getInt(indexCountIndex));
 
         if (this.indexCount.get() <= 0) {
-            this.indexCount.set(1);
+            this.indexCount.set(1); // 默认值为1?
         }
     }
 
