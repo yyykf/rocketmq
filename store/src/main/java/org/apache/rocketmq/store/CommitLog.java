@@ -556,15 +556,19 @@ public class CommitLog {
 
         long eclipseTimeInLock = 0;
         MappedFile unlockMappedFile = null;
+        // 最新的 CommitLog
         MappedFile mappedFile = this.mappedFileQueue.getLastMappedFile();
 
+        // 加锁，自旋或者可重入锁，取决于初始时的配置
         putMessageLock.lock(); //spin or ReentrantLock ,depending on store config
         try {
+            // 加锁时间
             long beginLockTimestamp = this.defaultMessageStore.getSystemClock().now();
             this.beginTimeInLock = beginLockTimestamp;
 
             // Here settings are stored timestamp, in order to ensure an orderly
             // global
+            // 用加锁时间作为存储时间，可以保证全局有序
             msg.setStoreTimestamp(beginLockTimestamp);
 
             if (null == mappedFile || mappedFile.isFull()) {
@@ -576,6 +580,7 @@ public class CommitLog {
                 return new PutMessageResult(PutMessageStatus.CREATE_MAPEDFILE_FAILED, null);
             }
 
+            // 添加消息
             result = mappedFile.appendMessage(msg, this.appendMessageCallback);
             switch (result.getStatus()) {
                 case PUT_OK:
@@ -607,6 +612,7 @@ public class CommitLog {
             eclipseTimeInLock = this.defaultMessageStore.getSystemClock().now() - beginLockTimestamp;
             beginTimeInLock = 0;
         } finally {
+            // 释放锁
             putMessageLock.unlock();
         }
 
@@ -615,6 +621,7 @@ public class CommitLog {
         }
 
         if (null != unlockMappedFile && this.defaultMessageStore.getMessageStoreConfig().isWarmMapedFileEnable()) {
+            // todo 释放锁住的内存，可以交换到磁盘去？
             this.defaultMessageStore.unlockMappedFile(unlockMappedFile);
         }
 
@@ -624,6 +631,7 @@ public class CommitLog {
         storeStatsService.getSinglePutMessageTopicTimesTotal(msg.getTopic()).incrementAndGet();
         storeStatsService.getSinglePutMessageTopicSizeTotal(topic).addAndGet(result.getWroteBytes());
 
+        // 处理刷盘，同步/异步
         handleDiskFlush(result, putMessageResult, msg);
         handleHA(result, putMessageResult, msg);
 
@@ -631,12 +639,14 @@ public class CommitLog {
     }
 
     public void handleDiskFlush(AppendMessageResult result, PutMessageResult putMessageResult, MessageExt messageExt) {
-        // Synchronization flush
+        // Synchronization flush 同步刷盘
         if (FlushDiskType.SYNC_FLUSH == this.defaultMessageStore.getMessageStoreConfig().getFlushDiskType()) {
             final GroupCommitService service = (GroupCommitService) this.flushCommitLogService;
             if (messageExt.isWaitStoreMsgOK()) {
+                // 构造刷盘请求，由GroupCommitService去消费
                 GroupCommitRequest request = new GroupCommitRequest(result.getWroteOffset() + result.getWroteBytes());
                 service.putRequest(request);
+                // 阻塞等待刷盘结果
                 boolean flushOK = request.waitForFlush(this.defaultMessageStore.getMessageStoreConfig().getSyncFlushTimeout());
                 if (!flushOK) {
                     log.error("do groupcommit, wait for flush failed, topic: " + messageExt.getTopic() + " tags: " + messageExt.getTags()
@@ -644,14 +654,17 @@ public class CommitLog {
                     putMessageResult.setPutMessageStatus(PutMessageStatus.FLUSH_DISK_TIMEOUT);
                 }
             } else {
+                // 不需要等待刷盘结果，直接唤醒刷盘线程
                 service.wakeup();
             }
         }
         // Asynchronous flush
         else {
+            // 如果没有开启堆外内存池，那就唤醒 flushCommitLogService，将 PageCache 的内容刷到磁盘
             if (!this.defaultMessageStore.getMessageStoreConfig().isTransientStorePoolEnable()) {
                 flushCommitLogService.wakeup();
             } else {
+                // 否则唤醒 commitLogService，先将堆外内存的内容 commit 到 pagecache 再刷盘
                 commitLogService.wakeup();
             }
         }
@@ -1176,6 +1189,14 @@ public class CommitLog {
             return msgStoreItemMemory;
         }
 
+        /**
+         *
+         * @param fileFromOffset CommitLog 起始偏移量
+         * @param byteBuffer 堆外内存或 PageCache
+         * @param maxBlank 文件可用字节
+         * @param msgInner 消息
+         * @return
+         */
         public AppendMessageResult doAppend(final long fileFromOffset, final ByteBuffer byteBuffer, final int maxBlank,
             final MessageExtBrokerInner msgInner) {
             // STORETIMESTAMP + STOREHOSTADDRESS + OFFSET <br>

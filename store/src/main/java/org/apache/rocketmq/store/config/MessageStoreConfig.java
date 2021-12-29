@@ -86,9 +86,14 @@ public class MessageStoreConfig {
     // This ensures no on-the-wire or on-disk corruption to the messages occurred.
     // This check adds some overhead,so it may be disabled in cases seeking extreme performance.
     private boolean checkCRCOnRecover = true;
-    // How many pages are to be flushed when flush CommitLog
+    /**
+     * How many pages are to be flushed when flush CommitLog 累计多少页才落盘
+     */
     private int flushCommitLogLeastPages = 4;
-    // How many pages are to be committed when commit data to file
+    //
+    /**
+     * How many pages are to be committed when commit data to file 累计多少页才提交到 PageCache
+     */
     private int commitCommitLogLeastPages = 4;
     // Flush page size when the disk in warming state
     private int flushLeastPagesWhenWarmMapedFile = 1024 / 4 * 16;
