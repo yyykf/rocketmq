@@ -45,9 +45,9 @@ public class MappedFile extends ReferenceResource {
 
     public static final int OS_PAGE_SIZE = 1024 * 4;
     protected static final Logger log = LoggerFactory.getLogger(LoggerName.STORE_LOGGER_NAME);
-    /** 映射的虚拟内存大小 */
+    /** 映射的虚拟内存大小，全局 */
     private static final AtomicLong TOTAL_MAPPED_VIRTUAL_MEMORY = new AtomicLong(0);
-    /** todo 映射的文件数? */
+    /** 映射的文件数，全局 */
     private static final AtomicInteger TOTAL_MAPPED_FILES = new AtomicInteger(0);
     /**
      * 如果有堆外内存的话，就是还未提交到 pagecache 的offset，也就是写的 offset
@@ -76,6 +76,7 @@ public class MappedFile extends ReferenceResource {
     /** mmap 对应的 pagecache，用于读数据，读写分离 */
     private MappedByteBuffer mappedByteBuffer;
     private volatile long storeTimestamp = 0;
+    /** 是否是队列中的首个文件 */
     private boolean firstCreateInQueue = false;
 
     public MappedFile() {
@@ -464,15 +465,15 @@ public class MappedFile extends ReferenceResource {
     }
 
     public SelectMappedBufferResult selectMappedBuffer(int pos) {
-        int readPosition = getReadPosition();
-        if (pos < readPosition && pos >= 0) {
+        int readPosition = getReadPosition();   // 获取可读offset，使用堆外内存时为 committedPosition，否则为 wrotePosition
+        if (pos < readPosition && pos >= 0) { // 如果要读取的位置位于有效位置 [0, readPostion]
             if (this.hold()) {
-                ByteBuffer byteBuffer = this.mappedByteBuffer.slice();
-                byteBuffer.position(pos);
-                int size = readPosition - pos;
-                ByteBuffer byteBufferNew = byteBuffer.slice();
+                ByteBuffer byteBuffer = this.mappedByteBuffer.slice();  //  获取一个子缓冲区
+                byteBuffer.position(pos);   // 移动新缓冲区的指针到指定位置
+                int size = readPosition - pos;  // 计算可读的大小
+                ByteBuffer byteBufferNew = byteBuffer.slice();  // 继续获取子缓冲区 todo 为什么需要 slice 两次
                 byteBufferNew.limit(size);
-                return new SelectMappedBufferResult(this.fileFromOffset + pos, byteBufferNew, size, this);
+                return new SelectMappedBufferResult(this.fileFromOffset + pos, byteBufferNew, size, this);  // 最终的绝对偏移量需要加上当前文件的起始偏移量
             }
         }
 
@@ -541,7 +542,7 @@ public class MappedFile extends ReferenceResource {
      */
     public int getReadPosition() {
         // 没有用堆外内存的情况，当前的可读 offset 就是 wrotePosition，否则为 committedPosition
-        // 如果使用堆外内存，那么在堆外内存的数据通过 mmap 的 PageCache 是读取不的，所以要看 committedPosition
+        // 如果使用堆外内存，那么在堆外内存的数据通过 mmap 的 PageCache 是读取不到的（因为还未提交），所以要看 committedPosition
         return this.writeBuffer == null ? this.wrotePosition.get() : this.committedPosition.get();
     }
 

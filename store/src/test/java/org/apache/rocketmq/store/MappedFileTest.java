@@ -38,12 +38,12 @@ public class MappedFileTest {
         boolean result = mappedFile.appendMessage(storeMessage.getBytes());
         assertThat(result).isTrue();
 
-        SelectMappedBufferResult selectMappedBufferResult = mappedFile.selectMappedBuffer(0);
-        byte[] data = new byte[storeMessage.length()];
+        SelectMappedBufferResult selectMappedBufferResult = mappedFile.selectMappedBuffer(1);
+        byte[] data = new byte[storeMessage.length()-1];
         selectMappedBufferResult.getByteBuffer().get(data);
         String readString = new String(data);
 
-        assertThat(readString).isEqualTo(storeMessage);
+        assertThat(readString).isEqualTo(storeMessage.substring(1));
 
         mappedFile.shutdown(1000);
         assertThat(mappedFile.isAvailable()).isFalse();

@@ -30,7 +30,7 @@ public class MessageStoreConfig {
     private String storePathCommitLog = System.getProperty("user.home") + File.separator + "store"
         + File.separator + "commitlog";
 
-    // CommitLog file size,default is 1G
+    // CommitLog file size,default is 1G CommitLog默认1G
     private int mapedFileSizeCommitLog = 1024 * 1024 * 1024;
     // ConsumeQueue file size,default is 30W
     private int mapedFileSizeConsumeQueue = 300000 * ConsumeQueue.CQ_STORE_UNIT_SIZE;
@@ -43,39 +43,39 @@ public class MessageStoreConfig {
     private int bitMapLengthConsumeQueueExt = 64;
 
     // CommitLog flush interval
-    // flush data to disk
+    // flush data to disk 刷盘时间间隔
     @ImportantField
     private int flushIntervalCommitLog = 500;
 
     // Only used if TransientStorePool enabled
-    // flush data to FileChannel
+    // flush data to FileChannel 在开启堆外内存池的情况下，提交到 PageCache 的时间间隔
     @ImportantField
     private int commitIntervalCommitLog = 200;
 
     /**
      * introduced since 4.0.x. Determine whether to use mutex reentrantLock when putting message.<br/>
-     * By default it is set to false indicating using spin lock when putting message.
+     * By default it is set to false indicating using spin lock when putting message. 添加消息时是否使用互斥锁，默认false使用自旋
      */
     private boolean useReentrantLockWhenPutMessage = false;
 
-    // Whether schedule flush,default is real-time
+    // Whether schedule flush,default is real-time 是否定时刷盘，默认false，应该和 @link #flushIntervalCommitLog 是一起搭配的
     @ImportantField
     private boolean flushCommitLogTimed = false;
     // ConsumeQueue flush interval
     private int flushIntervalConsumeQueue = 1000;
-    // Resource reclaim interval
+    // Resource reclaim interval 资源回收间隔
     private int cleanResourceInterval = 10000;
-    // CommitLog removal interval
+    // CommitLog removal interval Commit 删除间隔
     private int deleteCommitLogFilesInterval = 100;
     // ConsumeQueue removal interval
     private int deleteConsumeQueueFilesInterval = 100;
-    private int destroyMapedFileIntervalForcibly = 1000 * 120;
+    private int destroyMapedFileIntervalForcibly = 1000 * 120;  // 强制销毁映射文件间隔
     private int redeleteHangedFileInterval = 1000 * 120;
     // When to delete,default is at 4 am
     @ImportantField
     private String deleteWhen = "04";
-    private int diskMaxUsedSpaceRatio = 75;
-    // The number of hours to keep a log file before deleting it (in hours)
+    private int diskMaxUsedSpaceRatio = 75; // 磁盘最大使用比例
+    // The number of hours to keep a log file before deleting it (in hours) 文件默认保存72小时
     @ImportantField
     private int fileReservedTime = 72;
     // Flow control for ConsumeQueue
@@ -113,9 +113,9 @@ public class MessageStoreConfig {
     @ImportantField
     private int accessMessageInMemoryMaxRatio = 40;
     @ImportantField
-    private boolean messageIndexEnable = true;
-    private int maxHashSlotNum = 5000000;
-    private int maxIndexNum = 5000000 * 4;
+    private boolean messageIndexEnable = true; // 默认为消息建立 IndexFile
+    private int maxHashSlotNum = 5000000;   // 默认最大500W个hash槽
+    private int maxIndexNum = 5000000 * 4;  // 默认最大2kw个索引槽
     private int maxMsgsNumBatch = 64;
     @ImportantField
     private boolean messageIndexSafe = false;

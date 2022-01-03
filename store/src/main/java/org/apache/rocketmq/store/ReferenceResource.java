@@ -21,11 +21,13 @@ import java.util.concurrent.atomic.AtomicLong;
 public abstract class ReferenceResource {
     protected final AtomicLong refCount = new AtomicLong(1);
     protected volatile boolean available = true;
+    /** volatile，避免重复clean */
     protected volatile boolean cleanupOver = false;
     private volatile long firstShutdownTimestamp = 0;
 
     public synchronized boolean hold() {
         if (this.isAvailable()) {
+            // 如果当前资源可用的话，那就再递增一下引用计数
             if (this.refCount.getAndIncrement() > 0) {
                 return true;
             } else {
@@ -40,12 +42,18 @@ public abstract class ReferenceResource {
         return this.available;
     }
 
+    /**
+     * @param intervalForcibly 距离首次shutdown的时间，单位ms
+     */
     public void shutdown(final long intervalForcibly) {
         if (this.available) {
+            // 更新可用状态
             this.available = false;
+            // 记录首次销毁的时间
             this.firstShutdownTimestamp = System.currentTimeMillis();
             this.release();
         } else if (this.getRefCount() > 0) {
+            // 如果距离首次shutdown的时间大于 intervalForcibly，那么强制 release（通过将refCount置为负数）
             if ((System.currentTimeMillis() - this.firstShutdownTimestamp) >= intervalForcibly) {
                 this.refCount.set(-1000 - this.getRefCount());
                 this.release();
@@ -59,7 +67,7 @@ public abstract class ReferenceResource {
             return;
 
         synchronized (this) {
-
+            // 加锁，防止重复调用
             this.cleanupOver = this.cleanup(value);
         }
     }

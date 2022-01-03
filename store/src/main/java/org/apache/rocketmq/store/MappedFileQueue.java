@@ -35,13 +35,13 @@ import org.slf4j.LoggerFactory;
 public class MappedFileQueue {
     private static final Logger log = LoggerFactory.getLogger(LoggerName.STORE_LOGGER_NAME);
     private static final Logger LOG_ERROR = LoggerFactory.getLogger(LoggerName.STORE_ERROR_LOGGER_NAME);
-
+    /** 默认批量删除文件10个 */
     private static final int DELETE_FILES_BATCH_MAX = 10;
 
     private final String storePath;
-
+    /** 管理的文件数 */
     private final int mappedFileSize;
-
+    /** 读写分离的逻辑队列 */
     private final CopyOnWriteArrayList<MappedFile> mappedFiles = new CopyOnWriteArrayList<MappedFile>();
 
     private final AllocateMappedFileService allocateMappedFileService;
@@ -201,18 +201,21 @@ public class MappedFileQueue {
         if (mappedFileLast == null) {
             createOffset = startOffset - (startOffset % this.mappedFileSize);
         }
-
+        // 如果最后一个文件满了，那就计算新的偏移量，即最后一个文件的偏移量+文件大小
         if (mappedFileLast != null && mappedFileLast.isFull()) {
             createOffset = mappedFileLast.getFileFromOffset() + this.mappedFileSize;
         }
 
         if (createOffset != -1 && needCreate) {
+            // 根据偏移量拼接当前文件名
             String nextFilePath = this.storePath + File.separator + UtilAll.offset2FileName(createOffset);
+            // 根据偏移量+文件大小计算下一个文件名
             String nextNextFilePath = this.storePath + File.separator
                 + UtilAll.offset2FileName(createOffset + this.mappedFileSize);
             MappedFile mappedFile = null;
 
             if (this.allocateMappedFileService != null) {
+                // todo
                 mappedFile = this.allocateMappedFileService.putRequestAndReturnMappedFile(nextFilePath,
                     nextNextFilePath, this.mappedFileSize);
             } else {
@@ -224,6 +227,7 @@ public class MappedFileQueue {
             }
 
             if (mappedFile != null) {
+                // 如果当前队列为空，那么将当前文件设置首个文件
                 if (this.mappedFiles.isEmpty()) {
                     mappedFile.setFirstCreateInQueue(true);
                 }

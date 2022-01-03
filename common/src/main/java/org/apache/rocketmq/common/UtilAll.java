@@ -74,6 +74,7 @@ public class UtilAll {
 
     public static String offset2FileName(final long offset) {
         final NumberFormat nf = NumberFormat.getInstance();
+        // 20位整数，0位小数
         nf.setMinimumIntegerDigits(20);
         nf.setMaximumFractionDigits(0);
         nf.setGroupingUsed(false);
@@ -509,12 +510,15 @@ public class UtilAll {
             return;
         }
         if (file.isFile()) {
+            // 文件直接删除
             file.delete();
         } else if (file.isDirectory()) {
             File[] files = file.listFiles();
             for (File file1 : files) {
+                // 递归删除子文件
                 deleteFile(file1);
             }
+            // 删除当前目录
             file.delete();
         }
     }
